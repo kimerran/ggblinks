@@ -150,7 +150,7 @@ async function main() {
             },
             {
               label: `GG SOL`,
-              href: `?amount={amount}`,
+              href: `/api/${req.params[0]}?amount={amount}`,
               parameters: [
                 {
                   name: "amount",
