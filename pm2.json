@@ -1,0 +1,8 @@
+{
+    "apps": [
+        {
+            "name": "ggblink-main",
+            "script": "node index.js"
+        }
+    ]
+}
