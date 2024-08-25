@@ -9,7 +9,7 @@ const {
   LAMPORTS_PER_SOL,
 } =  require("@solana/web3.js")
 
-const connection = new Connection(clusterApiUrl("devnet"))
+const connection = new Connection(clusterApiUrl("mainnet-beta"))
 
 const createSendSolTransaction = async (amount, from, to) => {
     console.log('create send sol tx', {
