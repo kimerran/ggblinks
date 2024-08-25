@@ -88,7 +88,7 @@ const constructUrl = (url, query) => {
 }
 
 async function main() {
-  const browser = await puppeteer.launch({ headless: true }) // Set headless: true if you don't want to see the browser
+  const browser = await puppeteer.launch({ args: ['--no-sandbox'], headless: true }) // Set headless: true if you don't want to see the browser
   app.use(actionCorsMiddleware())
   app.use(express.json())
   app.get("/", (req, res) => {
