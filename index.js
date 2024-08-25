@@ -148,17 +148,17 @@ async function main() {
               label: `GG 0.001 SOL`,
               href: `/api/${req.params[0]}?amount=${0.001}`,
             },
-            {
-              label: `GG SOL`,
-              href: `/api/${req.params[0]}?amount={amount}`,
-              parameters: [
-                {
-                  name: "amount",
-                  label: "How many SOL",
-                  required: true,
-                },
-              ],
-            },
+            // {
+            //   label: `GG SOL`,
+            //   href: `/api/${req.params[0]}?amount={amount}`,
+            //   parameters: [
+            //     {
+            //       name: "amount",
+            //       label: "How many SOL",
+            //       required: true,
+            //     },
+            //   ],
+            // },
           ],
         },
       }
@@ -198,7 +198,7 @@ async function main() {
     res.redirect(req.params[0])
   })
 
-  app.listen(3000, () => {
+  app.listen(80, () => {
     console.log("listening...")
   })
 }
