@@ -31,7 +31,8 @@ const extractDetailsFromMetatags = (url, metaTags) => {
   let icon = metaTags["twitter:image"] || IMAGE_DEFAULT
   let wallet = extractWallet(title)
 
-  if (title.length > 48) {
+  console.log('extracted', {title, icon, wallet})
+  if (title & title.length > 48) {
     title = title.substring(0, 45) + "..."
   }
 
