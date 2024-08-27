@@ -32,7 +32,7 @@ const extractDetailsFromMetatags = (url, metaTags) => {
   let wallet = extractWallet(title)
 
   console.log('extracted', {title, icon, wallet})
-  if (title & title.length > 48) {
+  if (title && title?.length > 48) {
     title = title.substring(0, 45) + "..."
   }
 
