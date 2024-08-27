@@ -1,6 +1,7 @@
 const express = require("express")
 const puppeteer = require("puppeteer")
 const { getMetaTags } = require("./ metatags")
+const { extractWallet } = require('./extract-wallet')
 const { createSendSolTransaction } = require("./postSendSol")
 const path = require("path")
 const fs = require("fs")
@@ -9,27 +10,31 @@ const {
   actionCorsMiddleware,
   createPostResponse,
 } = require("@solana/actions")
+
+const { BlinksightsClient }  = require('blinksights-sdk')
+const client = new BlinksightsClient('df66eef7b86f5e2f767039327ffe740603ca569024378fd44d19751467abeb56');
+
 const app = express()
 
 const IMAGE_DEFAULT =
   "https://pbs.twimg.com/media/GVymlzra8AIARGS?format=jpg&name=medium"
 
-const extractWallet = (title) => {
-  try {
-    const regex = /(ggme:)([a-zA-Z0-9]+)!/
-    const match = title.match(regex)
-    return match[2]
-  } catch (error) {
-    return undefined
-  }
-}
+// const extractWallet = (title) => {
+//   try {
+//     const regex = /(ggme:)([a-zA-Z0-9]+)!/
+//     const match = title.match(regex)
+//     return match[2]
+//   } catch (error) {
+//     return undefined
+//   }
+// }
 
-const extractDetailsFromMetatags = (url, metaTags) => {
+const extractDetailsFromMetatags = async (url, metaTags) => {
   // facebook.com, youtube.com, tiktok.com
   //
   let title = metaTags["twitter:description"]
   let icon = metaTags["twitter:image"] || IMAGE_DEFAULT
-  let wallet = extractWallet(title)
+  let wallet = await extractWallet(title)
 
   console.log('extracted', {title, icon, wallet})
   if (title && title?.length > 48) {
@@ -116,7 +121,7 @@ async function main() {
       const urlObj = constructUrl(url, req.query)
 
       const metaTags = await getMetaTags(browser, urlObj.toString())
-      const extracted = extractDetailsFromMetatags(url, metaTags)
+      const extracted = await extractDetailsFromMetatags(url, metaTags)
 
       console.log("metaTags", metaTags)
 
@@ -138,7 +143,7 @@ async function main() {
           break
       }
 
-      const payload = {
+      const payload = client.createActionGetResponseV1(urlObj.toString(),{
         title: title,
         icon: extracted.icon,
         description: extracted.title,
@@ -163,7 +168,7 @@ async function main() {
             // },
           ],
         },
-      }
+      })
       return res.set(ACTIONS_CORS_HEADERS).json(payload)
     } catch (error) {
       console.log(error.message)
@@ -176,6 +181,13 @@ async function main() {
     const { account } = req.body
 
     const urlObj = constructUrl(req.params[0], req.query)
+    // try {
+    //   client.trackActionV2(account, `${urlObj.toString()}`)
+
+    // } catch (error) {
+    //   console.log(error)
+    // }
+
 
     const metaTags = await getMetaTags(browser, urlObj.toString())
     const extracted = extractDetailsFromMetatags(req.params[0], metaTags)
@@ -195,6 +207,9 @@ async function main() {
       // note: no additional signers are needed
       // signers: [],
     })
+
+
+
     return res.json(payload)
   })
 
