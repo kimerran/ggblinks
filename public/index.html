@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GGBlinks</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        nav {
+            background-color: #80D2FF;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        nav a {
+            color: rgb(0, 0, 0);
+            margin: 0 15px;
+            text-decoration: none;
+        }
+
+        .hero {
+            flex-grow: 1;
+            background-image: url('https://i.imgur.com/uhojt6a.jpeg');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+        }
+
+        .hero h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        .hero h2 {
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+
+        .hero input[type="text"] {
+            padding: 10px;
+            font-size: 1em;
+            border-radius: 5px;
+            border: none;
+            max-width: 300px;
+            width: 80%;
+        }
+
+        footer {
+            background-color: #80D2FF;
+            color: rgb(0, 0, 0);
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        footer .social-icons a {
+            color: white;
+            margin: 0 10px;
+            text-decoration: none;
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <a href="#">GGBlinks!</a>
+        <!-- <a href="#">About</a>
+        <a href="#">Services</a>
+        <a href="#">Contact</a> -->
+    </nav>
+
+    <div class="hero">
+        <div>
+            <h1>Convert your post into Blinks using GGBlinks</h1>
+            <input id="hero-input" type="text" placeholder="https://facebook.com/.....">
+            <h2>Your link is:</h2>
+            <h2 id="output">&nbsp;</h2>
+            <button onclick="copyToClipboard()">Copy GGBlink URL</button>
+
+        </div>
+        <div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="social-icons">
+            <!-- <a href="#" title="Facebook">&#xf09a;</a> -->
+            <a href="https://x.com/ggblinkme" title="Twitter">Follow us on X</a>
+            <!-- <a href="#" title="Instagram">&#xf16d;</a> -->
+            <!-- <a href="#" title="LinkedIn">&#xf0e1;</a> -->
+        </div>
+        <p>&copy; 2024 GGBlinks. All rights reserved.</p>
+    </footer>
+    <script>
+        function update() {
+            var inputValue = this.value;
+            document.getElementById('output').textContent = 'https://ggbl.ink/' + inputValue;
+        }
+
+        function copyToClipboard() {
+            var copyText = document.getElementById("output");
+            // Select the text field
+            // copyText.select();
+            // copyText.setSelectionRange(0, 99999); // For mobile devices
+
+            // Copy the text inside the text field
+            navigator.clipboard.writeText(copyText.innerHTML);
+
+            // Alert the copied text
+            alert("Copied the text: " + copyText.innerHTML);
+        }
+        document.getElementById('hero-input').onkeypress = update;
+        document.getElementById('hero-input').onchange = update;
+
+
+
+
+    </script>
+</body>
+
+</html>

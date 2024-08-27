@@ -2,11 +2,12 @@ const express = require("express")
 const puppeteer = require("puppeteer")
 const { getMetaTags } = require("./ metatags")
 const { createSendSolTransaction } = require("./postSendSol")
-
+const path = require("path")
+const fs = require("fs")
 const {
   ACTIONS_CORS_HEADERS,
   actionCorsMiddleware,
-  createPostResponse
+  createPostResponse,
 } = require("@solana/actions")
 const app = express()
 
@@ -88,12 +89,12 @@ const constructUrl = (url, query) => {
 }
 
 async function main() {
-  const browser = await puppeteer.launch({ args: ['--no-sandbox'], headless: true }) // Set headless: true if you don't want to see the browser
+  const browser = await puppeteer.launch({
+    args: ["--no-sandbox"],
+    headless: true,
+  }) // Set headless: true if you don't want to see the browser
   app.use(actionCorsMiddleware())
   app.use(express.json())
-  app.get("/", (req, res) => {
-    res.json("homepage")
-  })
 
   app.get("/actions.json", (req, res) => {
     const payload = {
@@ -170,8 +171,8 @@ async function main() {
   })
 
   app.post("/api/*", async (req, res) => {
-    const { amount } = req.query;
-    const { account } = req.body;
+    const { amount } = req.query
+    const { account } = req.body
 
     const urlObj = constructUrl(req.params[0], req.query)
 
@@ -180,7 +181,11 @@ async function main() {
 
     console.log("metaTags", metaTags)
 
-    const transaction = await createSendSolTransaction(amount, account, extracted.wallet);
+    const transaction = await createSendSolTransaction(
+      amount,
+      account,
+      extracted.wallet
+    )
     const payload = await createPostResponse({
       fields: {
         transaction,
@@ -189,12 +194,22 @@ async function main() {
       // note: no additional signers are needed
       // signers: [],
     })
-    return res.json(payload);
+    return res.json(payload)
   })
 
   app.get("/*", (req, res) => {
     console.log("req.params", req.params)
     console.log("req.query", req.query)
+
+    if (req.params[0] === "") {
+      console.log("homepage")
+      // read the content of index.htmlk
+      const filePath = path.join(__dirname, "public/index.html") // Specify the path to your file
+      const data = fs.readFileSync(filePath, "utf8")
+
+      res.type("html").send(data)
+    }
+
     res.redirect(req.params[0])
   })
 
