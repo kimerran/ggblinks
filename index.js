@@ -190,12 +190,14 @@ async function main() {
 
 
     const metaTags = await getMetaTags(browser, urlObj.toString())
-    const extracted = extractDetailsFromMetatags(req.params[0], metaTags)
+    const extracted = await extractDetailsFromMetatags(req.params[0], metaTags)
 
-    console.log("metaTags", metaTags)
+    console.log("extracted", extracted)
+
+    const amountCleaned = amount?.split("?")[0]
 
     const transaction = await createSendSolTransaction(
-      amount,
+      amountCleaned,
       account,
       extracted.wallet
     )
