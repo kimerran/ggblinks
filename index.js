@@ -1,7 +1,7 @@
 const express = require("express")
 const puppeteer = require("puppeteer")
 const { getMetaTags } = require("./ metatags")
-const { extractWallet } = require('./extract-wallet')
+const { extractWallet } = require("./extract-wallet")
 const { createSendSolTransaction } = require("./postSendSol")
 const path = require("path")
 const fs = require("fs")
@@ -11,48 +11,45 @@ const {
   createPostResponse,
 } = require("@solana/actions")
 
-const { BlinksightsClient }  = require('blinksights-sdk')
-const client = new BlinksightsClient('df66eef7b86f5e2f767039327ffe740603ca569024378fd44d19751467abeb56');
+const { SEND_TOKEN_ADDRESS, PYUSD_TOKEN_ADDRESS } = require("./constants")
+
+const { transferSPL } = require("./send-token")
+
+const { BlinksightsClient } = require("blinksights-sdk")
+const client = new BlinksightsClient(
+  "df66eef7b86f5e2f767039327ffe740603ca569024378fd44d19751467abeb56"
+)
 
 const app = express()
 
-const IMAGE_DEFAULT =
-  "https://pbs.twimg.com/media/GVymlzra8AIARGS?format=jpg&name=medium"
-
-// const extractWallet = (title) => {
-//   try {
-//     const regex = /(ggme:)([a-zA-Z0-9]+)!/
-//     const match = title.match(regex)
-//     return match[2]
-//   } catch (error) {
-//     return undefined
-//   }
-// }
+const IMAGE_DEFAULT = "https://i.imgur.com/CXh9lkt.jpeg"
 
 const extractDetailsFromMetatags = async (url, metaTags) => {
   // facebook.com, youtube.com, tiktok.com
   //
-  let title = metaTags["twitter:description"]
+  let description = metaTags["twitter:description"]
   let icon = metaTags["twitter:image"] || IMAGE_DEFAULT
-  let wallet = await extractWallet(title)
+  let { walletAddress, original, ggtag } = await extractWallet(description)
 
-  console.log('extracted', {title, icon, wallet})
-  if (title && title?.length > 48) {
-    title = title.substring(0, 45) + "..."
+  console.log("extracted", { description, icon, walletAddress, ggtag })
+  if (description && description?.length > 128) {
+    description = description.substring(0, 125) + "🔹"
   }
 
-  title = title + " (Powered by GGBlinks - Create yours now at ggbl.ink)"
-
-  if (!wallet) {
-    title =
-      title +
-      " ***Unable to determine wallet address on the post. Actions is disabled***"
+  description += "\n\n"
+  if (!walletAddress) {
+    description =
+      description +
+      "⛔ Unable to determine wallet address on the post. Actions is disabled. "
   }
+  description = description + "⚡Powered by GGBlinks (https://ggbl.ink)⚡"
 
   return {
-    title,
+    description,
     icon,
-    wallet,
+    wallet: walletAddress,
+    original,
+    ggtag,
   }
 }
 
@@ -73,13 +70,14 @@ const determinePlatform = (url) => {
 }
 
 const shortifyWallet = (wallet) => {
-  if (wallet) {
+  console.log('shorrify', wallet)
+  if (wallet && !wallet.includes(".")) {
     const firstFour = wallet.substring(0, 4)
     // Extract the last four characters
     const lastFour = wallet.substring(wallet.length - 4)
-    return ` by ${firstFour}..${lastFour}`
+    return `${firstFour}..${lastFour}`
   }
-  return ``
+  return wallet
 }
 
 const constructUrl = (url, query) => {
@@ -92,6 +90,59 @@ const constructUrl = (url, query) => {
     }
   }
   return urlObj
+}
+
+const tagToDefaultAmount = (ggtag) => {
+  let amount = 0.0005 //0.0069
+  switch (ggtag) {
+    case "send":
+      token = 100
+      break
+    case "pay":
+      token = 0.5
+      break
+    default:
+      token = 0.0005
+  }
+  return token
+}
+
+const tagToToken = (ggtag) => {
+  let token = "$SOL"
+  switch (ggtag) {
+    case "send":
+      token = "$SEND"
+      break
+    case "pay":
+      token = "$PYUSD"
+      break
+    default:
+      token = "$SOL"
+  }
+  return token
+}
+
+const constructTitle = (url, ggtag, owner) => {
+  const platform = determinePlatform(url)
+
+  let token = tagToToken(ggtag)
+  // let postType = "Facebook post"
+  let poster = owner ? ` by ${shortifyWallet(owner)}` : ""
+
+  // 💜
+  let title = "GGBlinks"
+  switch (platform) {
+    case "facebook":
+      title = `Send ${token} for this Facebook post${poster}`
+      break
+    case "youtube":
+      title = `Send ${token} for this YouTube video${poster}`
+      break
+    case "tiktok":
+      title = `Send ${token} for this TikTok video${poster}`
+      break
+  }
+  return title
 }
 
 async function main() {
@@ -123,49 +174,35 @@ async function main() {
       const metaTags = await getMetaTags(browser, urlObj.toString())
       const extracted = await extractDetailsFromMetatags(url, metaTags)
 
-      console.log("metaTags", metaTags)
+      console.log("extracted", extracted)
 
-      const platform = determinePlatform(url)
-      console.log("platform", platform)
+      const title = constructTitle(url, extracted.ggtag, extracted.original)
+      const tokenToUse = tagToToken(extracted.ggtag)
+      const defaultAmount = tagToDefaultAmount(extracted.ggtag)
 
-      let title = "GGBlinks"
-      switch (platform) {
-        case "facebook":
-          title = `Facebook post${shortifyWallet(extracted.wallet)} (ggbl.ink)`
-          break
-        case "youtube":
-          title = `YouTube video${shortifyWallet(extracted.wallet)} (ggbl.ink)`
-          break
-        case "tiktok":
-          title = `TikTok video by${shortifyWallet(
-            extracted.wallet
-          )} (ggbl.ink)`
-          break
-      }
-
-      const payload = client.createActionGetResponseV1(urlObj.toString(),{
+      const payload = client.createActionGetResponseV1(urlObj.toString(), {
         title: title,
         icon: extracted.icon,
-        description: extracted.title,
+        description: extracted.description,
         // label: `GG 0.001 SOL`,
         disabled: !extracted.wallet,
         links: {
           actions: [
             {
-              label: `GG 0.001 SOL`,
-              href: `/api/${req.params[0]}?amount=${0.001}`,
+              label: `Send ${defaultAmount} ${tokenToUse} 💜`,
+              href: `/api/${req.params[0]}?amount=${defaultAmount}`,
             },
-            // {
-            //   label: `GG SOL`,
-            //   href: `/api/${req.params[0]}?amount={amount}`,
-            //   parameters: [
-            //     {
-            //       name: "amount",
-            //       label: "How many SOL",
-            //       required: true,
-            //     },
-            //   ],
-            // },
+            {
+              label: `Send ${tokenToUse} 💜`,
+              href: `/api/${req.params[0]}?amount={amount}`,
+              parameters: [
+                {
+                  name: "amount",
+                  label: `How many ${tokenToUse}?`,
+                  required: true,
+                },
+              ],
+            },
           ],
         },
       })
@@ -181,36 +218,59 @@ async function main() {
     const { account } = req.body
 
     const urlObj = constructUrl(req.params[0], req.query)
-    // try {
-    //   client.trackActionV2(account, `${urlObj.toString()}`)
-
-    // } catch (error) {
-    //   console.log(error)
-    // }
-
+    console.log("urlObj", urlObj.toString())
+    try {
+      const trackActionPayload = {
+        account,
+        url: `${urlObj.toString().split("?")[0]}`,
+      }
+      client.trackActionV2(trackActionPayload.account, trackActionPayload.url)
+    } catch (error) {
+      // console.log(error)
+      console.error("error on trackActionV2", trackActionPayload)
+    }
 
     const metaTags = await getMetaTags(browser, urlObj.toString())
     const extracted = await extractDetailsFromMetatags(req.params[0], metaTags)
-
+    console.log("amount", amount)
     console.log("extracted", extracted)
-
     const amountCleaned = amount?.split("?")[0]
 
-    const transaction = await createSendSolTransaction(
-      amountCleaned,
-      account,
-      extracted.wallet
-    )
+    let transaction
+
+    switch (extracted.ggtag) {
+      case "send":
+        transaction = await transferSPL(
+          SEND_TOKEN_ADDRESS,
+          account,
+          extracted.wallet,
+          amountCleaned
+        )
+        break
+      case "pay":
+        transaction = await transferSPL(
+          PYUSD_TOKEN_ADDRESS,
+          account,
+          extracted.wallet,
+          amountCleaned
+        )
+        break
+      default:
+        transaction = await createSendSolTransaction(
+          amountCleaned,
+          account,
+          extracted.wallet
+        )
+    }
+
     const payload = await createPostResponse({
       fields: {
         transaction,
-        message: `Sent ${amount} to ${extracted.wallet}`,
+        message: `Sent to ${extracted.original}`,
       },
       // note: no additional signers are needed
       // signers: [],
     })
-
-
 
     return res.json(payload)
   })
@@ -220,7 +280,6 @@ async function main() {
     console.log("req.query", req.query)
 
     if (req.params[0] === "") {
-      console.log("homepage")
       // read the content of index.htmlk
       const filePath = path.join(__dirname, "public/index.html") // Specify the path to your file
       const data = fs.readFileSync(filePath, "utf8")
@@ -231,9 +290,25 @@ async function main() {
     res.redirect(req.params[0])
   })
 
+  app.use((err, req, res, next) => {
+    console.error(err.stack)
+    res.status(500).send("Unexepcted error")
+  })
+
   app.listen(80, () => {
     console.log("listening...")
   })
 }
+process.on("uncaughtException", (err) => {
+  console.error("There was an uncaught error:", err)
+  // Perform any necessary cleanup
+  // process.exit(1); // Exit the process with a failure code
+})
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason)
+  // Perform any necessary cleanup
+  // process.exit(1); // Exit the process with a failure code
+})
 
 main()

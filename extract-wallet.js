@@ -11,7 +11,7 @@ const isPublicKey = (candidate) => {
     new PublicKey(candidate)
     return candidate
   } catch (error) {
-    return;
+    return
   }
 }
 
@@ -31,29 +31,37 @@ const isAllDomains = async (candidate) => {
   } catch (error) {}
 }
 
-const extractWallet = async (title) => {
+const extractWallet = async (titleFromTag) => {
   try {
-    const regex = /ggme:(.*)!/
+    const title = titleFromTag.split("!")[0] + "!"
+
+    const regex = /gg(.*):(.*)!/
     const match = title.match(regex)
+// ggpay:([^!]+)!
 
-    const candidate = match[1]
+    if (match) {
+      const ggtag = match[1]
+      const candidate = match[2]
 
-    console.log('candidate', candidate)
+      console.log("extract tag and wallet", { ggtag, candidate })
 
-    let walletAddress
-    console.log('testing wallet address')
-    walletAddress = isPublicKey(candidate)
+      let walletAddress
+      console.log("testing wallet address")
+      walletAddress = isPublicKey(candidate)
 
-    if (walletAddress) return walletAddress
+      if (walletAddress) return { walletAddress, original: candidate, ggtag }
 
-    console.log('testing all domains')
-    walletAddress = await isAllDomains(candidate)
-    if (walletAddress) return walletAddress
+      console.log("testing all domains")
+      walletAddress = await isAllDomains(candidate)
+      if (walletAddress) return { walletAddress, original: candidate, ggtag }
 
-    return
+      return {}
+    }
+
+    return {}
   } catch (error) {
     console.log(error)
-    return undefined
+    return {}
   }
 }
 
