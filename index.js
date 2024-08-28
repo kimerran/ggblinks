@@ -11,6 +11,9 @@ const {
   createPostResponse,
 } = require("@solana/actions")
 
+const { composeDetailsFromMetatags } = require("./ metatags")
+const { composeDetailsYoutube } = require("./youtube")
+
 const { SEND_TOKEN_ADDRESS, PYUSD_TOKEN_ADDRESS } = require("./constants")
 
 const { transferSPL } = require("./send-token")
@@ -21,37 +24,6 @@ const client = new BlinksightsClient(
 )
 
 const app = express()
-
-const IMAGE_DEFAULT = "https://i.imgur.com/CXh9lkt.jpeg"
-
-const extractDetailsFromMetatags = async (url, metaTags) => {
-  // facebook.com, youtube.com, tiktok.com
-  //
-  let description = metaTags["twitter:description"]
-  let icon = metaTags["twitter:image"] || IMAGE_DEFAULT
-  let { walletAddress, original, ggtag } = await extractWallet(description)
-
-  console.log("extracted", { description, icon, walletAddress, ggtag })
-  if (description && description?.length > 128) {
-    description = description.substring(0, 125) + "🔹"
-  }
-
-  description += "\n\n"
-  if (!walletAddress) {
-    description =
-      description +
-      "⛔ Unable to determine wallet address on the post. Actions is disabled. "
-  }
-  description = description + "⚡Powered by GGBlinks (https://ggbl.ink)⚡"
-
-  return {
-    description,
-    icon,
-    wallet: walletAddress,
-    original,
-    ggtag,
-  }
-}
 
 const determinePlatform = (url) => {
   console.log("determining platform", url)
@@ -70,7 +42,7 @@ const determinePlatform = (url) => {
 }
 
 const shortifyWallet = (wallet) => {
-  console.log('shorrify', wallet)
+  console.log("shorrify", wallet)
   if (wallet && !wallet.includes(".")) {
     const firstFour = wallet.substring(0, 4)
     // Extract the last four characters
@@ -170,11 +142,21 @@ async function main() {
     try {
       const url = req.params[0]
       const urlObj = constructUrl(url, req.query)
+      const platform = determinePlatform(urlObj.toString())
+      let extracted
 
-      const metaTags = await getMetaTags(browser, urlObj.toString())
-      const extracted = await extractDetailsFromMetatags(url, metaTags)
+      switch (platform) {
+        case "youtube":
+          extracted = await composeDetailsYoutube(urlObj.toString())
+          break
+        default:
+          extracted = await composeDetailsFromMetatags(
+            browser,
+            urlObj.toString()
+          )
+      }
 
-      console.log("extracted", extracted)
+      console.log("extracted>>>>>", extracted)
 
       const title = constructTitle(url, extracted.ggtag, extracted.original)
       const tokenToUse = tagToToken(extracted.ggtag)
@@ -208,7 +190,7 @@ async function main() {
       })
       return res.set(ACTIONS_CORS_HEADERS).json(payload)
     } catch (error) {
-      console.log(error.message)
+      // console.log(error.message)
       res.json("error")
     }
   })
@@ -219,19 +201,36 @@ async function main() {
 
     const urlObj = constructUrl(req.params[0], req.query)
     console.log("urlObj", urlObj.toString())
-    try {
-      const trackActionPayload = {
-        account,
-        url: `${urlObj.toString().split("?")[0]}`,
-      }
-      client.trackActionV2(trackActionPayload.account, trackActionPayload.url)
-    } catch (error) {
-      // console.log(error)
-      console.error("error on trackActionV2", trackActionPayload)
+
+    // try {
+    //   const trackActionPayload = {
+    //     account,
+    //     url: `${urlObj.toString().split("?")[0]}`,
+    //   }
+    //   client.trackActionV2(trackActionPayload.account, trackActionPayload.url)
+    // } catch (error) {
+    //   // console.log(error)
+    //   console.error("error on trackActionV2", trackActionPayload)
+    // }
+
+    const platform = determinePlatform(urlObj.toString())
+    let extracted
+
+    switch (platform) {
+      case "youtube":
+        extracted = await composeDetailsYoutube(urlObj.toString())
+        break
+      default:
+        extracted = await composeDetailsFromMetatags(
+          browser,
+          urlObj.toString()
+        )
     }
 
-    const metaTags = await getMetaTags(browser, urlObj.toString())
-    const extracted = await extractDetailsFromMetatags(req.params[0], metaTags)
+    console.log("extracted>>>>>", extracted)
+
+
+
     console.log("amount", amount)
     console.log("extracted", extracted)
     const amountCleaned = amount?.split("?")[0]
@@ -291,11 +290,11 @@ async function main() {
   })
 
   app.use((err, req, res, next) => {
-    console.error(err.stack)
+    console.error(err)
     res.status(500).send("Unexepcted error")
   })
 
-  app.listen(80, () => {
+  app.listen(8001, () => {
     console.log("listening...")
   })
 }

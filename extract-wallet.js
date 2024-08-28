@@ -9,8 +9,10 @@ const connection = new Connection(RPC_URL)
 const isPublicKey = (candidate) => {
   try {
     new PublicKey(candidate)
+    console.log("returning candidate", candidate)
     return candidate
   } catch (error) {
+    console.log("errorr", error)
     return
   }
 }
@@ -37,7 +39,7 @@ const extractWallet = async (titleFromTag) => {
 
     const regex = /gg(.*):(.*)!/
     const match = title.match(regex)
-// ggpay:([^!]+)!
+    console.log("match", match)
 
     if (match) {
       const ggtag = match[1]
@@ -49,6 +51,7 @@ const extractWallet = async (titleFromTag) => {
       console.log("testing wallet address")
       walletAddress = isPublicKey(candidate)
 
+      console.log("isPublicKey>>>> walletAddress", walletAddress)
       if (walletAddress) return { walletAddress, original: candidate, ggtag }
 
       console.log("testing all domains")
