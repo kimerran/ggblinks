@@ -135,6 +135,12 @@ async function main() {
     res.json(payload)
   })
 
+  app.get("/robots.txt", (req, res) => {
+    const filePath = path.join(__dirname, "public/robots.txt") // Specify the path to your file
+    const data = fs.readFileSync(filePath, "utf8")
+    res.type("text/plain").send(data)
+  })
+
   app.get("/api/*", async (req, res) => {
     console.log("req.params", req.params)
     console.log("req.query", req.query)
