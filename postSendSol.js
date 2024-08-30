@@ -11,7 +11,7 @@ const {
 
 const connection = new Connection(clusterApiUrl("mainnet-beta"))
 
-const createSendSolTransaction = async (amount, from, to) => {
+const createSendSolTransaction = async (amount, from, to, blinksightsActionIdentityInstruction) => {
     console.log('create send sol tx', {
         amount,
         from,
@@ -49,6 +49,7 @@ const createSendSolTransaction = async (amount, from, to) => {
   transaction.add(setComputeLimit)
   transaction.add(addPriorityFee)
   transaction.add(transferSolInstruction)
+  transaction.add(blinksightsActionIdentityInstruction)
 
   return transaction;
 }

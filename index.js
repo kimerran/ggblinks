@@ -162,7 +162,9 @@ async function main() {
       const tokenToUse = tagToToken(extracted.ggtag)
       const defaultAmount = tagToDefaultAmount(extracted.ggtag)
 
-      const payload = client.createActionGetResponseV1(urlObj.toString(), {
+      const blinksightsUrl = `https://ggbl.ink/${urlObj.toString().split("?")[0]}`
+
+      const payload = client.createActionGetResponseV1(blinksightsUrl, {
         title: title,
         icon: extracted.icon,
         description: extracted.description,
@@ -201,17 +203,20 @@ async function main() {
 
     const urlObj = constructUrl(req.params[0], req.query)
     console.log("urlObj", urlObj.toString())
+    const blinksightsUrl = `https://ggbl.ink/${urlObj.toString().split("?")[0]}`
 
-    // try {
-    //   const trackActionPayload = {
-    //     account,
-    //     url: `${urlObj.toString().split("?")[0]}`,
-    //   }
-    //   client.trackActionV2(trackActionPayload.account, trackActionPayload.url)
-    // } catch (error) {
-    //   // console.log(error)
-    //   console.error("error on trackActionV2", trackActionPayload)
-    // }
+    try {
+
+      const trackActionPayload = {
+        account,
+        url: blinksightsUrl,
+      }
+      console.log('trackActionPayload', trackActionPayload)
+      client.trackActionV2(trackActionPayload.account, trackActionPayload.url)
+    } catch (error) {
+      // console.log(error)
+      console.error("error on trackActionV2", trackActionPayload)
+    }
 
     const platform = determinePlatform(urlObj.toString())
     let extracted
@@ -236,6 +241,7 @@ async function main() {
     const amountCleaned = amount?.split("?")[0]
 
     let transaction
+    const getActionIdentityInstructionV2 = client.getActionIdentityInstructionV2(account, blinksightsUrl)
 
     switch (extracted.ggtag) {
       case "send":
@@ -243,7 +249,8 @@ async function main() {
           SEND_TOKEN_ADDRESS,
           account,
           extracted.wallet,
-          amountCleaned
+          amountCleaned,
+          getActionIdentityInstructionV2
         )
         break
       case "pay":
@@ -251,14 +258,16 @@ async function main() {
           PYUSD_TOKEN_ADDRESS,
           account,
           extracted.wallet,
-          amountCleaned
+          amountCleaned,
+          getActionIdentityInstructionV2
         )
         break
       default:
         transaction = await createSendSolTransaction(
           amountCleaned,
           account,
-          extracted.wallet
+          extracted.wallet,
+          getActionIdentityInstructionV2
         )
     }
 
@@ -294,7 +303,7 @@ async function main() {
     res.status(500).send("Unexepcted error")
   })
 
-  app.listen(8001, () => {
+  app.listen(80, () => {
     console.log("listening...")
   })
 }

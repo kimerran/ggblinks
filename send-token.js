@@ -46,7 +46,8 @@ const transferSPL = async (
   tokenAddress,
   senderAddress,
   recipientAddress,
-  amount
+  amount,
+  blinksightsActionIdentityInstruction
 ) => {
   const SENDR_ATA = await getAssociatedTokenAddress(
     tokenAddress,
@@ -122,6 +123,7 @@ const transferSPL = async (
       setComputeUnitLimitInstruction,
       createAtaInstruction,
       splTransferInstruction,
+      blinksightsActionIdentityInstruction,
     ],
   }).compileToV0Message()
 
