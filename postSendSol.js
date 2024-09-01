@@ -49,7 +49,9 @@ const createSendSolTransaction = async (amount, from, to, blinksightsActionIdent
   transaction.add(setComputeLimit)
   transaction.add(addPriorityFee)
   transaction.add(transferSolInstruction)
-  transaction.add(blinksightsActionIdentityInstruction)
+  if (blinksightsActionIdentityInstruction) {
+    transaction.add(blinksightsActionIdentityInstruction)
+  }
 
   return transaction;
 }

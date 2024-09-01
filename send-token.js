@@ -113,9 +113,10 @@ const transferSPL = async (
     [new solanaWeb3.PublicKey(senderAddress)],
     programId
   )
+  console.log('blinksightsActionIdentityInstruction', blinksightsActionIdentityInstruction)
 
   const blockhash = await connection.getLatestBlockhash()
-  const messagev0 = new solanaWeb3.TransactionMessage({
+  const tx = new solanaWeb3.TransactionMessage({
     payerKey: new solanaWeb3.PublicKey(senderAddress),
     recentBlockhash: blockhash.blockhash,
     instructions: [
@@ -123,9 +124,13 @@ const transferSPL = async (
       setComputeUnitLimitInstruction,
       createAtaInstruction,
       splTransferInstruction,
-      blinksightsActionIdentityInstruction,
     ],
-  }).compileToV0Message()
+  })
+
+  if (blinksightsActionIdentityInstruction) {
+    tx.instructions.push(blinksightsActionIdentityInstruction)
+  }
+  const messagev0  = tx.compileToV0Message()
 
   const transaction = new solanaWeb3.VersionedTransaction(messagev0)
   return transaction
