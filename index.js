@@ -5,6 +5,8 @@ const { extractWallet } = require("./extract-wallet")
 const { createSendSolTransaction } = require("./postSendSol")
 const path = require("path")
 const fs = require("fs")
+const NodeCache = require( "node-cache" );
+
 const {
   ACTIONS_CORS_HEADERS,
   actionCorsMiddleware,
@@ -118,6 +120,8 @@ const constructTitle = (url, ggtag, owner) => {
 }
 
 async function main() {
+  const myCache = new NodeCache({ stdTTL: 300 });
+
   const browser = await puppeteer.launch({
     args: ["--no-sandbox"],
     headless: true,
@@ -148,6 +152,13 @@ async function main() {
     try {
       const url = req.params[0]
       const urlObj = constructUrl(url, req.query)
+
+      // check cache
+      const cachedGetResponse = myCache.get(urlObj.toString())
+      if (cachedGetResponse) {
+        return res.set(ACTIONS_CORS_HEADERS).json(cachedGetResponse)
+      }
+
       const platform = determinePlatform(urlObj.toString())
       let extracted
 
@@ -197,6 +208,7 @@ async function main() {
           ],
         },
       })
+      myCache.set(urlObj.toString(), payload)
       return res.set(ACTIONS_CORS_HEADERS).json(payload)
     } catch (error) {
       // console.log(error.message)
