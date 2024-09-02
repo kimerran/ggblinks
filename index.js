@@ -5,6 +5,8 @@ const { extractWallet } = require("./extract-wallet")
 const { createSendSolTransaction } = require("./postSendSol")
 const path = require("path")
 const fs = require("fs")
+const NodeCache = require( "node-cache" );
+
 const {
   ACTIONS_CORS_HEADERS,
   actionCorsMiddleware,
@@ -118,6 +120,8 @@ const constructTitle = (url, ggtag, owner) => {
 }
 
 async function main() {
+  const myCache = new NodeCache({ stdTTL: 300 });
+
   const browser = await puppeteer.launch({
     args: ["--no-sandbox"],
     headless: true,
@@ -148,6 +152,13 @@ async function main() {
     try {
       const url = req.params[0]
       const urlObj = constructUrl(url, req.query)
+
+      // check cache
+      const cachedGetResponse = myCache.get(urlObj.toString())
+      if (cachedGetResponse) {
+        return res.set(ACTIONS_CORS_HEADERS).json(cachedGetResponse)
+      }
+
       const platform = determinePlatform(urlObj.toString())
       let extracted
 
@@ -168,9 +179,10 @@ async function main() {
       const tokenToUse = tagToToken(extracted.ggtag)
       const defaultAmount = tagToDefaultAmount(extracted.ggtag)
 
-      const blinksightsUrl = `https://ggbl.ink/${urlObj.toString().split("?")[0]}`
+      const blinksightsUrl = `https://ggbl.ink/${urlObj.toString().split("?")[0]}?`
+      const payload = await client.createActionGetResponseV1(blinksightsUrl, {
 
-      const payload = client.createActionGetResponseV1(blinksightsUrl, {
+      // const payload =  {
         title: title,
         icon: extracted.icon,
         description: extracted.description,
@@ -196,6 +208,7 @@ async function main() {
           ],
         },
       })
+      myCache.set(urlObj.toString(), payload)
       return res.set(ACTIONS_CORS_HEADERS).json(payload)
     } catch (error) {
       // console.log(error.message)
@@ -204,13 +217,19 @@ async function main() {
   })
 
   app.post("/api/*", async (req, res) => {
-    const { amount } = req.query
+    const { amount, actionId } = req.query
     const { account } = req.body
+
+    console.log('req.query', req.query)
+    // const actionId = amount.split("?actionId=")[1]
 
     const urlObj = constructUrl(req.params[0], req.query)
     console.log("urlObj", urlObj.toString())
-    const blinksightsUrl = `https://ggbl.ink/${urlObj.toString().split("?")[0]}`
 
+    // TODO: check if already has ?, if yes then just use &
+    const blinksightsUrl = `https://ggbl.ink/${urlObj.toString().split("?")[0]}` + "?amount=" + amount + "&actionId=" + actionId
+
+    console.log("blinksightsUrl", blinksightsUrl)
     try {
 
       const trackActionPayload = {
@@ -218,7 +237,7 @@ async function main() {
         url: blinksightsUrl,
       }
       console.log('trackActionPayload', trackActionPayload)
-      client.trackActionV2(trackActionPayload.account, trackActionPayload.url)
+      await client.trackActionV2(trackActionPayload.account, blinksightsUrl)
     } catch (error) {
       // console.log(error)
       console.error("error on trackActionV2", trackActionPayload)
@@ -247,7 +266,7 @@ async function main() {
     const amountCleaned = amount?.split("?")[0]
 
     let transaction
-    const getActionIdentityInstructionV2 = client.getActionIdentityInstructionV2(account, blinksightsUrl)
+    const getActionIdentityInstructionV2 = await client.getActionIdentityInstructionV2(account, blinksightsUrl)
 
     switch (extracted.ggtag) {
       case "send":
