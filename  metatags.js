@@ -1,7 +1,6 @@
 const { composeDetails } = require("./compose-details")
 
 const getMetaTags = async (browser, url) => {
-  console.log("querying url", url)
   const page = await browser.newPage()
   await page.goto(url)
   await page.waitForSelector("meta")
