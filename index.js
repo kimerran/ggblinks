@@ -1,3 +1,4 @@
+require("dotenv").config()
 const express = require("express")
 const puppeteer = require("puppeteer")
 const { getMetaTags } = require("./ metatags")
@@ -5,7 +6,7 @@ const { extractWallet } = require("./extract-wallet")
 const { createSendSolTransaction } = require("./postSendSol")
 const path = require("path")
 const fs = require("fs")
-const NodeCache = require( "node-cache" );
+const NodeCache = require("node-cache")
 
 const {
   ACTIONS_CORS_HEADERS,
@@ -21,14 +22,11 @@ const { SEND_TOKEN_ADDRESS, PYUSD_TOKEN_ADDRESS } = require("./constants")
 const { transferSPL } = require("./send-token")
 
 const { BlinksightsClient } = require("blinksights-sdk")
-const client = new BlinksightsClient(
-  "df66eef7b86f5e2f767039327ffe740603ca569024378fd44d19751467abeb56"
-)
+const client = new BlinksightsClient(process.env.BLINKSIGHTS_ACCESS_TOKEN)
 
 const app = express()
 
 const determinePlatform = (url) => {
-  console.log("determining platform", url)
   if (url.includes("facebook")) {
     return "facebook"
   }
@@ -44,7 +42,6 @@ const determinePlatform = (url) => {
 }
 
 const shortifyWallet = (wallet) => {
-  console.log("shorrify", wallet)
   if (wallet && !wallet.includes(".")) {
     const firstFour = wallet.substring(0, 4)
     // Extract the last four characters
@@ -120,7 +117,7 @@ const constructTitle = (url, ggtag, owner) => {
 }
 
 async function main() {
-  const myCache = new NodeCache({ stdTTL: 300 });
+  const myCache = new NodeCache({ stdTTL: 300 })
 
   const browser = await puppeteer.launch({
     args: ["--no-sandbox"],
@@ -146,9 +143,6 @@ async function main() {
   })
 
   app.get("/api/*", async (req, res) => {
-    console.log("req.params", req.params)
-    console.log("req.query", req.query)
-
     try {
       const url = req.params[0]
       const urlObj = constructUrl(url, req.query)
@@ -173,20 +167,17 @@ async function main() {
           )
       }
 
-      console.log("extracted>>>>>", extracted)
-
       const title = constructTitle(url, extracted.ggtag, extracted.original)
       const tokenToUse = tagToToken(extracted.ggtag)
       const defaultAmount = tagToDefaultAmount(extracted.ggtag)
 
-      const blinksightsUrl = `https://ggbl.ink/${urlObj.toString().split("?")[0]}?`
+      const blinksightsUrl = `https://ggbl.ink/${
+        urlObj.toString().split("?")[0]
+      }?`
       const payload = await client.createActionGetResponseV1(blinksightsUrl, {
-
-      // const payload =  {
         title: title,
         icon: extracted.icon,
         description: extracted.description,
-        // label: `GG 0.001 SOL`,
         disabled: !extracted.wallet,
         links: {
           actions: [
@@ -211,7 +202,7 @@ async function main() {
       myCache.set(urlObj.toString(), payload)
       return res.set(ACTIONS_CORS_HEADERS).json(payload)
     } catch (error) {
-      // console.log(error.message)
+      console.error(error.message)
       res.json("error")
     }
   })
@@ -219,27 +210,23 @@ async function main() {
   app.post("/api/*", async (req, res) => {
     const { amount, actionId } = req.query
     const { account } = req.body
-
-    console.log('req.query', req.query)
-    // const actionId = amount.split("?actionId=")[1]
-
     const urlObj = constructUrl(req.params[0], req.query)
-    console.log("urlObj", urlObj.toString())
 
-    // TODO: check if already has ?, if yes then just use &
-    const blinksightsUrl = `https://ggbl.ink/${urlObj.toString().split("?")[0]}` + "?amount=" + amount + "&actionId=" + actionId
+    // check if already has ?, if yes then just use &
+    const blinksightsUrl =
+      `https://ggbl.ink/${urlObj.toString().split("?")[0]}` +
+      "?amount=" +
+      amount +
+      "&actionId=" +
+      actionId
 
-    console.log("blinksightsUrl", blinksightsUrl)
     try {
-
       const trackActionPayload = {
         account,
         url: blinksightsUrl,
       }
-      console.log('trackActionPayload', trackActionPayload)
       await client.trackActionV2(trackActionPayload.account, blinksightsUrl)
     } catch (error) {
-      // console.log(error)
       console.error("error on trackActionV2", trackActionPayload)
     }
 
@@ -251,22 +238,14 @@ async function main() {
         extracted = await composeDetailsYoutube(urlObj.toString())
         break
       default:
-        extracted = await composeDetailsFromMetatags(
-          browser,
-          urlObj.toString()
-        )
+        extracted = await composeDetailsFromMetatags(browser, urlObj.toString())
     }
 
-    console.log("extracted>>>>>", extracted)
-
-
-
-    console.log("amount", amount)
-    console.log("extracted", extracted)
     const amountCleaned = amount?.split("?")[0]
 
     let transaction
-    const getActionIdentityInstructionV2 = await client.getActionIdentityInstructionV2(account, blinksightsUrl)
+    const getActionIdentityInstructionV2 =
+      await client.getActionIdentityInstructionV2(account, blinksightsUrl)
 
     switch (extracted.ggtag) {
       case "send":
@@ -301,22 +280,16 @@ async function main() {
         transaction,
         message: `Sent to ${extracted.original}`,
       },
-      // note: no additional signers are needed
-      // signers: [],
     })
 
     return res.json(payload)
   })
 
   app.get("/*", (req, res) => {
-    console.log("req.params", req.params)
-    console.log("req.query", req.query)
-
     if (req.params[0] === "") {
-      // read the content of index.htmlk
+      // read the content of index.html
       const filePath = path.join(__dirname, "public/index.html") // Specify the path to your file
       const data = fs.readFileSync(filePath, "utf8")
-
       res.type("html").send(data)
     }
 
@@ -334,14 +307,10 @@ async function main() {
 }
 process.on("uncaughtException", (err) => {
   console.error("There was an uncaught error:", err)
-  // Perform any necessary cleanup
-  // process.exit(1); // Exit the process with a failure code
 })
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error("Unhandled Rejection at:", promise, "reason:", reason)
-  // Perform any necessary cleanup
-  // process.exit(1); // Exit the process with a failure code
 })
 
 main()
