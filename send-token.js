@@ -83,9 +83,9 @@ const transferSPL = async (
     ],
   })
 
-  if (blinksightsActionIdentityInstruction) {
-    tx.instructions.push(blinksightsActionIdentityInstruction)
-  }
+  // if (blinksightsActionIdentityInstruction) {
+  //   tx.instructions.push(blinksightsActionIdentityInstruction)
+  // }
   const messagev0 = tx.compileToV0Message()
 
   const transaction = new solanaWeb3.VersionedTransaction(messagev0)

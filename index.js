@@ -17,7 +17,7 @@ const {
 const { composeDetailsFromMetatags } = require("./ metatags")
 const { composeDetailsYoutube } = require("./youtube")
 
-const { SEND_TOKEN_ADDRESS, PYUSD_TOKEN_ADDRESS } = require("./constants")
+const { SEND_TOKEN_ADDRESS, PYUSD_TOKEN_ADDRESS, SKID_TOKEN_ADDRESS } = require("./constants")
 
 const { transferSPL } = require("./send-token")
 
@@ -72,6 +72,9 @@ const tagToDefaultAmount = (ggtag) => {
     case "pay":
       token = 0.5
       break
+    case "skid":
+      token = 100
+      break
     default:
       token = 0.0005
   }
@@ -86,6 +89,9 @@ const tagToToken = (ggtag) => {
       break
     case "pay":
       token = "$PYUSD"
+      break
+    case "skid":
+      token = "$SKID"
       break
     default:
       token = "$SOL"
@@ -266,6 +272,15 @@ async function main() {
           getActionIdentityInstructionV2
         )
         break
+      case "skid":
+          transaction = await transferSPL(
+            SKID_TOKEN_ADDRESS,
+            account,
+            extracted.wallet,
+            amountCleaned,
+            getActionIdentityInstructionV2
+          )
+          break
       default:
         transaction = await createSendSolTransaction(
           amountCleaned,
@@ -290,7 +305,17 @@ async function main() {
       // read the content of index.html
       const filePath = path.join(__dirname, "public/index.html") // Specify the path to your file
       const data = fs.readFileSync(filePath, "utf8")
-      res.type("html").send(data)
+      const csp = `
+      default-src 'self' 'unsafe-inline';
+      script-src 'self' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline' data: cdnjs.cloudflare.com fonts.googleapis.com blob: https://fonts.googleapis.com;
+      img-src 'self' 'unsafe-inline' data: i.imgur.com imgur.com blob: https://ipfs.dscvr.one https://media.dscvr.one https://medai1.stg.dscvr.one;
+      font-src 'self' 'unsafe-inline' data: fonts.gstatic.com fonts.googleapis.com cdnjs.cloudflare.com;
+    `.replace(/\s+/g, " ")
+
+      res.setHeader("Content-Security-Policy", csp)
+
+      return res.type("html").send(data)
     }
 
     res.redirect(req.params[0])
