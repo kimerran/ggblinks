@@ -15,6 +15,7 @@
     "@solana/actions": "^1.6.2",
     "@solana/web3.js": "^1.95.3",
     "blinksights-sdk": "^1.0.19",
+    "borsh": "0.7.0",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
