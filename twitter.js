@@ -102,14 +102,14 @@ const getOwnerWallet = async (authorId) => {
   const domain = extractDomain(name)
   console.log("extracted domain", domain)
   if (domain) {
-    walletAddress = await tryIfSnsOrAllDomains(domain)
+    walletAddress = (await tryIfSnsOrAllDomains(domain)).walletAddress
   }
   console.log("tryIfSnsOrAllDomains", walletAddress)
 
   // if this is still null, check the description
   if (!walletAddress) {
     const candidateInDesc = extractPartBetween(description, "ggme:", "!")
-    walletAddress = await tryIfSnsOrAllDomains(candidateInDesc)
+    walletAddress = (await tryIfSnsOrAllDomains(candidateInDesc)).walletAddress
   }
   console.log("in desc", walletAddress)
 
