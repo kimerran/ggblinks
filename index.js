@@ -17,11 +17,16 @@ const {
 const { composeDetailsFromMetatags } = require("./ metatags")
 const { composeDetailsYoutube } = require("./youtube")
 
-const { SEND_TOKEN_ADDRESS, PYUSD_TOKEN_ADDRESS, SKID_TOKEN_ADDRESS } = require("./constants")
+const {
+  SEND_TOKEN_ADDRESS,
+  PYUSD_TOKEN_ADDRESS,
+  SKID_TOKEN_ADDRESS,
+} = require("./constants")
 
 const { transferSPL } = require("./send-token")
 
 const { BlinksightsClient } = require("blinksights-sdk")
+const { composeDetailsTwitter } = require("./twitter")
 const client = new BlinksightsClient(process.env.BLINKSIGHTS_ACCESS_TOKEN)
 
 const app = express()
@@ -38,6 +43,12 @@ const determinePlatform = (url) => {
   }
   if (url.includes("tiktok")) {
     return "tiktok"
+  }
+  if (url.includes("x.com")) {
+    return "twitter"
+  }
+  if (url.includes("twitter.com")) {
+    return "twitter"
   }
 }
 
@@ -104,8 +115,11 @@ const constructTitle = (url, ggtag, owner) => {
 
   let token = tagToToken(ggtag)
   // let postType = "Facebook post"
-  let poster = owner ? ` by ${shortifyWallet(owner)}` : ""
 
+  let poster = owner ? ` by ${owner}` : ""
+  if (platform !== "twitter") {
+    poster = owner ? ` by ${shortifyWallet(owner)}` : ""
+  }
   // 💜
   let title = "GGBlinks"
   switch (platform) {
@@ -118,6 +132,8 @@ const constructTitle = (url, ggtag, owner) => {
     case "tiktok":
       title = `Send ${token} for this TikTok video${poster}`
       break
+    case "twitter":
+      title = `Send ${token} for this X post${poster}`
   }
   return title
 }
@@ -165,6 +181,9 @@ async function main() {
       switch (platform) {
         case "youtube":
           extracted = await composeDetailsYoutube(urlObj.toString())
+          break
+        case "twitter":
+          extracted = await composeDetailsTwitter(urlObj.toString())
           break
         default:
           extracted = await composeDetailsFromMetatags(
@@ -243,6 +262,9 @@ async function main() {
       case "youtube":
         extracted = await composeDetailsYoutube(urlObj.toString())
         break
+      case "twitter":
+        extracted = await composeDetailsTwitter(urlObj.toString())
+        break
       default:
         extracted = await composeDetailsFromMetatags(browser, urlObj.toString())
     }
@@ -273,14 +295,14 @@ async function main() {
         )
         break
       case "skid":
-          transaction = await transferSPL(
-            SKID_TOKEN_ADDRESS,
-            account,
-            extracted.wallet,
-            amountCleaned,
-            getActionIdentityInstructionV2
-          )
-          break
+        transaction = await transferSPL(
+          SKID_TOKEN_ADDRESS,
+          account,
+          extracted.wallet,
+          amountCleaned,
+          getActionIdentityInstructionV2
+        )
+        break
       default:
         transaction = await createSendSolTransaction(
           amountCleaned,

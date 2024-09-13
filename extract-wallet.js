@@ -17,11 +17,17 @@ const isPublicKey = (candidate) => {
 }
 
 const isSns = async (candidate) => {
-  const pubkey = await resolve(connection, candidate.split(".sol")[0])
-  return pubkey.toBase58()
+  try {
+    const domain = candidate.split(".sol")[0]
+    const pubkey = await resolve(connection, domain.toLowerCase())
+    return pubkey.toBase58()
+  } catch (error) {
+    console.log(error)
+  }
 }
 
 const isAllDomains = async (candidate) => {
+  console.log("isAllDomains", candidate)
   try {
     if (candidate.includes(".sol")) {
       return await isSns(candidate)
@@ -30,6 +36,18 @@ const isAllDomains = async (candidate) => {
     const pubkey = await parser.getOwnerFromDomainTld(candidate)
     return pubkey.toBase58()
   } catch (error) {}
+}
+
+const tryIfSnsOrAllDomains = async (original) => {
+  console.log("in tryIfSnsOrAllDomains", original)
+  try {
+    const walletAddress = await isAllDomains(original)
+    if (walletAddress) return { walletAddress, original }
+    return
+  } catch (error) {
+    console.error(error)
+    return
+  }
 }
 
 const extractWallet = async (titleFromTag) => {
@@ -59,5 +77,8 @@ const extractWallet = async (titleFromTag) => {
 }
 
 module.exports = {
+  isSns,
+  isAllDomains,
+  tryIfSnsOrAllDomains,
   extractWallet,
 }
